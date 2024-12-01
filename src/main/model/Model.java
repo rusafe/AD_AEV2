@@ -28,70 +28,73 @@ import org.w3c.dom.NodeList;
 
 import utils.Utils;
 
+/**
+ * Clase que contiene toda la logica de los datos de la aplicacion
+ */
 public class Model {
 	/**
-	 * 
+	 * Constante que hace referencia a que el usuario es de tipo desconocido
 	 */
 	public static final int UNKNOWN = -1;
 	/**
-	 * 
+	 * Constante que hace referencia a que el usuario es de tipo administrador
 	 */
 	public static final int ADMIN = 0;
 	/**
-	 * 
+	 * Constante que hace referencia a que el usuario es de tipo cliente
 	 */
 	public static final int CLIENT = 1;
 	/**
-	 * 
+	 * Array que contiene los tipos de usuarios como strings
 	 */
 	private static final String[] USER_TYPES = new String[] {"admin", "client"};
 	/**
-	 * 
+	 * Ruta al directorio donde se guardan los ficheros CSV
 	 */
 	private static final String CSV_DIRECTORY = "resources/csv";
 	/**
-	 * 
+	 * Ruta al directorio donde se guardan los ficheros XML
 	 */
 	private static final String XML_DIRECTORY = "resources/xml";
 	
 	/**
-	 * 
+	 * Guarda el tipo de usuario que se conecta
 	 */
 	private int userType = UNKNOWN;
 	/**
-	 * 
+	 * Guarda la ultima consulta realizada por el usuario
 	 */
 	private String lastQuery = null;
 	
 	/**
-	 * 
-	 * @return
+	 * Getter que devuelve el tipo de usuario que ha iniciado sesion
+	 * @return El tipo de usuario
 	 */
 	public int getUserType() {
 		return userType;
 	}
 	
 	/**
-	 * 
-	 * @return
+	 * Getter que devuelve la ultima consulta realizada por el usuario
+	 * @return La ultima consulta realizada
 	 */
 	public String getLastQuery() {
 		return lastQuery;
 	}
 	
 	/**
-	 * 
-	 * @param query
+	 * Setter que guarda la ultima consulta realizada por el usuario
+	 * @param query Ultima consulta realizada
 	 */
 	public void setLastQuery(String query) {
 		lastQuery = query;
 	}
 	
 	/**
-	 * 
-	 * @param username
-	 * @param password
-	 * @throws SQLException
+	 * Metodo que inicia la conexion con la base de datos
+	 * @param username Usuario de la base de datos
+	 * @param password Contraseña del usario
+	 * @throws SQLException Si no existe el usuario con contraseña especificado
 	 */
 	public void login(String username, String password) throws SQLException {
 		String hashedPassword = Utils.passwordHash(password);
@@ -109,7 +112,7 @@ public class Model {
 	}
 	
 	/**
-	 * 
+	 * Metodo que cierra la conexion con la base de datos y cierra la sesion del usuario
 	 */
 	public void logout() {
 		ConnectionDb.closeConnection();
@@ -117,12 +120,12 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param query
-	 * @return
-	 * @throws Exception
+	 * Metodo que obtiene informacion de una consulta SQL y la transforma en un formato valido para un JTable
+	 * @param query Consulta SQL
+	 * @return Estructura de datos compatible con JTable con la informacion de la consulta
+	 * @throws SQLException Si ocurre algun problema con la consulta SQL
 	 */
-	public DefaultTableModel transformQueryToTableModel(String query) throws Exception {
+	public DefaultTableModel transformQueryToTableModel(String query) throws SQLException {
 		try {
 			Statement stmt = ConnectionDb.getConnection().createStatement();
 			ResultSet rs = stmt.executeQuery(query);
@@ -144,14 +147,14 @@ public class Model {
 			stmt.close();
 			
 			return tableModel;
-		} catch (Exception e) {
-			throw e;
+		} catch (SQLException e) {
+			throw new SQLException("La consulta introducida no es correcta");
 		}
 	}
 	
 	/**
-	 * 
-	 * @throws Exception
+	 * Metodo que exporta la informacion de la ultima consulta realizada a un fichero CSV
+	 * @throws Exception Si ocurre algun error en el proceso de exportado
 	 */
 	public void exportCsvFromLastQuery() throws Exception {
 		File csvDirectory = new File(CSV_DIRECTORY);
@@ -183,11 +186,11 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param username
-	 * @param password
-	 * @param type
-	 * @throws SQLException
+	 * Metodo que crea un nuevo usuario en la base de datos y lo inserta en la tabla users
+	 * @param username Nombre del usuario
+	 * @param password Contraseña del usuario
+	 * @param type Tipo de usuario
+	 * @throws SQLException Si ocurre algun error en el proceso de creacion o insercion
 	 */
 	public void createNewUser(String username, String password, int type) throws SQLException {
 		String hashedPassword = Utils.passwordHash(password);
@@ -224,11 +227,11 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param csvRoute
-	 * @return
-	 * @throws FileNotFoundException
-	 * @throws Exception
+	 * Metodo que importa un crea una tabla en la BBDD en base a un fichero CSV, inserta su contenido en dicha tabla y crea un fichero XML por cada fila de informacion
+	 * @param csvRoute Ruta al fichero CSV
+	 * @return Informacion de cada una de las filas del fichero CSV concatenadas
+	 * @throws FileNotFoundException Si no existe el fichero en la ruta indicada
+	 * @throws Exception Si ocurre algun error durante el proceso de importacion
 	 */
 	public String importCsv(String csvRoute) throws FileNotFoundException, Exception {
 		File csvFile = new File(csvRoute);
@@ -250,10 +253,10 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param name
-	 * @param columns
-	 * @throws Exception
+	 * Metodo que crea una tabla en la base de datos
+	 * @param name Nombre de la tabla
+	 * @param columns Columnas de la tabla
+	 * @throws Exception Si ocurre algun error en el proceso de creacion
 	 */
 	private void createDbTable(String name, String[] columns) throws Exception {
 		try {
@@ -277,11 +280,11 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param csv
-	 * @param destinationDirectory
-	 * @return
-	 * @throws Exception
+	 * Metodo que lee un fichero CSV y crea un fichero XML por cada una de sus filas
+	 * @param csv Objeto File con el fichero CSV
+	 * @param destinationDirectory Directorio donde se van a guardar los ficheros XML
+	 * @return Informacion de cada una de las filas del fichero CSV concatenadas
+	 * @throws Exception Si ocurre algun error durante el proceso de creacion de los ficheos XML
 	 */
 	private String createCountriesXmlFromCsv(File csv, String destinationDirectory) throws Exception {
 		File xmlDirectory = new File(destinationDirectory);
@@ -332,11 +335,11 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param dbTable
-	 * @param xmlDirectory
-	 * @throws FileNotFoundException
-	 * @throws Exception
+	 * Metodo que lee los ficheros XML de un directorio e inserta sus datos en una tabla de la base de datos
+	 * @param dbTable Nombre de la tabla de la base de datos
+	 * @param xmlDirectory Directorio donde estan almacenados los ficheros XML
+	 * @throws FileNotFoundException Si el directorio introducido no existe
+	 * @throws Exception Si ocurre algun error en el proceso de lectura o insercion
 	 */
 	private void insertFromXmlToDb(String dbTable, String xmlDirectory) throws FileNotFoundException, Exception {
 		File directory = new File(xmlDirectory);
@@ -378,10 +381,10 @@ public class Model {
 	}
 	
 	/**
-	 * 
-	 * @param csv
-	 * @return
-	 * @throws Exception
+	 * Metodo que obtiene el encabezado de un fichero CSV
+	 * @param csv Objeto File con el fichero CSV
+	 * @return El encabezado del fichero CSV
+	 * @throws Exception Si ocurre algun error con la lectura del fichero
 	 */
 	private String[] getHeaderFromCsv(File csv) throws Exception {
 		try (BufferedReader br = new BufferedReader(new FileReader(csv))) {

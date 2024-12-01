@@ -3,11 +3,14 @@ package utils;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * Clase que contiene diversos metodos estaticos de utilidad general
+ */
 public class Utils {
 	/**
-	 * 
-	 * @param password
-	 * @return
+	 * Metodo que devuelve el hash MD5 de una contraseña
+	 * @param password La contraseña a la que aplicar el hash
+	 * @return El hash de la contraseña
 	 */
 	public static String passwordHash(String password) {
 		try {
