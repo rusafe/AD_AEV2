@@ -74,7 +74,8 @@ public class Controlador {
 						return;
 					}
 					
-					model.exportCsvFromLastQuery();	
+					model.exportCsvFromLastQuery();
+					JOptionPane.showMessageDialog(null, "Datos exportados con exito", "Exportacion CSV", JOptionPane.INFORMATION_MESSAGE);
 				} catch (Exception exception) {
 					JOptionPane.showMessageDialog(null, exception.getMessage(), "Error en la exportacion", JOptionPane.ERROR_MESSAGE);
 				}
@@ -86,6 +87,8 @@ public class Controlador {
 					JOptionPane.showMessageDialog(null, "No tienes permisos de administrador", "Permisos insuficientes", JOptionPane.ERROR_MESSAGE);
 					return;
 				}
+				
+				model.setLastQuery(null);
 				
 				vistaClient.getTxtQuery().setText("");
 				vistaClient.getTblQuery().setModel(new DefaultTableModel());

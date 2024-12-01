@@ -117,6 +117,7 @@ public class Model {
 	public void logout() {
 		ConnectionDb.closeConnection();
 		userType = UNKNOWN;
+		lastQuery = null;
 	}
 	
 	/**
@@ -211,6 +212,10 @@ public class Model {
 			grantUserPermissions.executeUpdate();
 			grantUserPermissions.close();
 		} catch (SQLException e) {
+			PreparedStatement deleteUser = ConnectionDb.getConnection().prepareStatement("DROP USER ?;");
+			deleteUser.setString(1, username);
+			deleteUser.executeUpdate();
+			deleteUser.close();
 			throw new SQLException("No se ha creado todavia la tabla population");
 		}
 		
