@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -27,43 +28,56 @@ import utils.Utils;
 public class Model {
 	public static final int ADMIN = 0;
 	public static final int CLIENT = 1;
+	private static final String[] USER_TYPES = new String[] {"admin", "client"};
 	private static final String XML_DIRECTORY = "resources/xml";
 	
-	public void createNewUser(String username, String password, int type) throws SQLException {
-		final String[] userType = new String[] {"admin", "client"};
+	private int userType;
+	
+	public int getUserType() {
+		return userType;
+	}
+	
+	public void login(String username, String password) throws SQLException {
+		String hashedPassword = Utils.passwordHash(password);
 		
+		if(!ConnectionDb.instantiateConnection(username, hashedPassword))
+			throw new SQLException("Usuario o contraseña incorrectos");
+		
+		try {
+			Statement stmt = ConnectionDb.getConnection().createStatement();
+			stmt.executeQuery("SELECT id FROM users;");
+			userType = ADMIN;
+		} catch (SQLException e) {
+			userType = CLIENT;
+		}
+	}
+	
+	public void createNewUser(String username, String password, int type) throws SQLException {
 		if(!ConnectionDb.instantiateConnection("root", ""))
 			throw new SQLException("Ha habido un problema conectando con la base de datos");
 		
 		String hashedPassword = Utils.passwordHash(password);
 		
 		try {
-//			Statement createDbUser = ConnectionDb.getConnection().createStatement();
-//			createDbUser.execute(String.format("CREATE USER %s IDENTIFIED BY %s;", username, hashedPassword));
-			
-			PreparedStatement createDbUser = ConnectionDb.getConnection().prepareStatement("CREATE USER ? IDENTIFIED BY ?");
+			PreparedStatement createDbUser = ConnectionDb.getConnection().prepareStatement("CREATE USER ? IDENTIFIED BY ?;");
 			createDbUser.setString(1, username);
 			createDbUser.setString(2, hashedPassword);
-			createDbUser.execute();
+			createDbUser.executeUpdate();
 			createDbUser.close();
 			
-//			Statement grantUserPermissions = ConnectionDb.getConnection().createStatement();
-//			grantUserPermissions.execute(String.format("GRANT SELECT on population.population TO %s;", username));
-			
-			PreparedStatement grantUserPermissions = ConnectionDb.getConnection().prepareStatement("GRANT SELECT on population.population TO ?");
+			PreparedStatement grantUserPermissions = ConnectionDb.getConnection().prepareStatement("GRANT SELECT on population.population TO ?;");
 			grantUserPermissions.setString(1, username);
-			grantUserPermissions.execute();
+			grantUserPermissions.executeUpdate();
 			grantUserPermissions.close();
 		} catch (SQLException e) {
-//			throw new SQLException("No se ha creado todavia la tabla population");
-			throw e;
+			throw new SQLException("No se ha creado todavia la tabla population");
 		}
 		
 		try {
 			PreparedStatement insertUserStmt = ConnectionDb.getConnection().prepareStatement("INSERT INTO users (login, password, type) VALUES (?, ?, ?);");
 			insertUserStmt.setString(1, username);
 			insertUserStmt.setString(2, hashedPassword);
-			insertUserStmt.setString(3, userType[type]);
+			insertUserStmt.setString(3, USER_TYPES[type]);
 			insertUserStmt.executeUpdate();
 			insertUserStmt.close();
 		} catch (SQLException e) {

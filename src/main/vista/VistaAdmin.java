@@ -115,6 +115,7 @@ public class VistaAdmin extends JFrame {
 		lblImportCsv.setFont(new Font("Tahoma", Font.PLAIN, 16));
 		lblImportCsv.setBounds(36, 131, 206, 20);
 		contentPane.add(lblImportCsv);
-		setVisible(true);
+		
+		setVisible(false);
 	}
 }

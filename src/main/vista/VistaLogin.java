@@ -17,6 +17,18 @@ public class VistaLogin extends JFrame {
 	private JPasswordField pwdfPassword;
 	private JButton btnLogin;
 
+	public JTextField getTxtUsername() {
+		return txtUsername;
+	}
+	
+	public JPasswordField getPwdfPassword() {
+		return pwdfPassword;
+	}
+	
+	public JButton getBtnLogin() {
+		return btnLogin;
+	}
+	
 	public VistaLogin() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -56,6 +68,8 @@ public class VistaLogin extends JFrame {
 		btnLogin.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		btnLogin.setBounds(154, 186, 121, 23);
 		contentPane.add(btnLogin);
+		
+		setVisible(true);
 	}
 
 }
