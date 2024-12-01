@@ -24,7 +24,9 @@ public class VistaAdmin extends JFrame {
 	private JTextField txtUsername;
 	private JPasswordField pwdfPassword;
 	private JButton btnCreateUser;
-
+	private JPasswordField pwdfRepeatPassword;
+	private JButton btnGoBack;
+	
 	public JButton getBtnImportCsv() {
 		return btnImportCsv;
 	}
@@ -45,13 +47,26 @@ public class VistaAdmin extends JFrame {
 		return pwdfPassword;
 	}
 	
+	public JPasswordField getPwdfRepeatPassword() {
+		return pwdfRepeatPassword;
+	}
+	
 	public JButton getBtnCreateUser() {
 		return btnCreateUser;
 	}
 	
+	public JButton getBtnGoBack() {
+		return btnGoBack;
+	}
+	
 	public VistaAdmin() {
+		initComponents();
+		setVisible(false);
+	}
+	
+	private void initComponents() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 830, 684);
+		setBounds(100, 100, 830, 745);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 
@@ -103,7 +118,7 @@ public class VistaAdmin extends JFrame {
 		contentPane.add(pwdfPassword);
 		
 		btnCreateUser = new JButton("Crear Usuario");
-		btnCreateUser.setBounds(396, 76, 122, 23);
+		btnCreateUser.setBounds(592, 75, 122, 23);
 		contentPane.add(btnCreateUser);
 		
 		JLabel lblCreateUser = new JLabel("Creación de nuevo usuario");
@@ -116,6 +131,18 @@ public class VistaAdmin extends JFrame {
 		lblImportCsv.setBounds(36, 131, 206, 20);
 		contentPane.add(lblImportCsv);
 		
-		setVisible(false);
+		pwdfRepeatPassword = new JPasswordField();
+		pwdfRepeatPassword.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		pwdfRepeatPassword.setBounds(407, 77, 154, 20);
+		contentPane.add(pwdfRepeatPassword);
+		
+		JLabel lblRepeatPassword = new JLabel("Repetir Contraseña");
+		lblRepeatPassword.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		lblRepeatPassword.setBounds(407, 56, 154, 14);
+		contentPane.add(lblRepeatPassword);
+		
+		btnGoBack = new JButton("Volver");
+		btnGoBack.setBounds(36, 631, 116, 44);
+		contentPane.add(btnGoBack);
 	}
 }

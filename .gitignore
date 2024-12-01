@@ -28,3 +28,5 @@ bin
 
 # XML files created by the app
 resources/xml
+# CSV file created by the app
+resources/csv/exported.csv

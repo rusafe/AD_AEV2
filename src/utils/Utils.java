@@ -4,6 +4,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class Utils {
+	/**
+	 * 
+	 * @param password
+	 * @return
+	 */
 	public static String passwordHash(String password) {
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");

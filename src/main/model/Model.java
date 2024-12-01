@@ -1,15 +1,18 @@
 package main.model;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import javax.swing.table.DefaultTableModel;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -26,17 +29,70 @@ import org.w3c.dom.NodeList;
 import utils.Utils;
 
 public class Model {
+	/**
+	 * 
+	 */
+	public static final int UNKNOWN = -1;
+	/**
+	 * 
+	 */
 	public static final int ADMIN = 0;
+	/**
+	 * 
+	 */
 	public static final int CLIENT = 1;
+	/**
+	 * 
+	 */
 	private static final String[] USER_TYPES = new String[] {"admin", "client"};
+	/**
+	 * 
+	 */
+	private static final String CSV_DIRECTORY = "resources/csv";
+	/**
+	 * 
+	 */
 	private static final String XML_DIRECTORY = "resources/xml";
 	
-	private int userType;
+	/**
+	 * 
+	 */
+	private int userType = UNKNOWN;
+	/**
+	 * 
+	 */
+	private String lastQuery = null;
 	
+	/**
+	 * 
+	 * @return
+	 */
 	public int getUserType() {
 		return userType;
 	}
 	
+	/**
+	 * 
+	 * @return
+	 */
+	public String getLastQuery() {
+		return lastQuery;
+	}
+	
+	/**
+	 * 
+	 * @param query
+	 */
+	public void setLastQuery(String query) {
+		lastQuery = query;
+	}
+	
+	/**
+	 * 
+	 * @param username
+	 * @param password
+	 * @throws SQLException
+	 */
 	public void login(String username, String password) throws SQLException {
 		String hashedPassword = Utils.passwordHash(password);
 		
@@ -52,10 +108,88 @@ public class Model {
 		}
 	}
 	
-	public void createNewUser(String username, String password, int type) throws SQLException {
-		if(!ConnectionDb.instantiateConnection("root", ""))
-			throw new SQLException("Ha habido un problema conectando con la base de datos");
+	/**
+	 * 
+	 */
+	public void logout() {
+		ConnectionDb.closeConnection();
+		userType = UNKNOWN;
+	}
+	
+	/**
+	 * 
+	 * @param query
+	 * @return
+	 * @throws Exception
+	 */
+	public DefaultTableModel transformQueryToTableModel(String query) throws Exception {
+		try {
+			Statement stmt = ConnectionDb.getConnection().createStatement();
+			ResultSet rs = stmt.executeQuery(query);
+			ResultSetMetaData rsmd = rs.getMetaData();
+			
+			DefaultTableModel tableModel = new DefaultTableModel();
+			
+			for(int i = 1; i <= rsmd.getColumnCount(); i++) {
+				tableModel.addColumn(rsmd.getColumnName(i));
+			}
+			while(rs.next()) {
+				Object[] row = new Object[rsmd.getColumnCount()];
+				for(int i = 0; i < rsmd.getColumnCount(); i++) {
+					row[i] = rs.getObject(i + 1);
+				}
+				tableModel.addRow(row);
+			}
+			rs.close();
+			stmt.close();
+			
+			return tableModel;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	public void exportCsvFromLastQuery() throws Exception {
+		File csvDirectory = new File(CSV_DIRECTORY);
+		if(!csvDirectory.exists())
+			csvDirectory.mkdirs();
 		
+		try (BufferedWriter bw = new BufferedWriter(new FileWriter(String.format("%s/exported.csv", CSV_DIRECTORY)))){
+			Statement stmt = ConnectionDb.getConnection().createStatement();
+			ResultSet rs = stmt.executeQuery(lastQuery);
+			ResultSetMetaData rsmd = rs.getMetaData();
+			for(int i = 1; i <= rsmd.getColumnCount(); i++) {
+				bw.write(rsmd.getColumnName(i));
+				if(i != rsmd.getColumnCount())
+					bw.write(";");
+			}
+			while(rs.next()) {
+				bw.newLine();
+				for(int i = 1; i <= rsmd.getColumnCount(); i++) {
+					bw.write(rs.getString(i));
+					if(i != rsmd.getColumnCount())
+						bw.write(";");
+				}
+			}
+			rs.close();
+			stmt.close();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	/**
+	 * 
+	 * @param username
+	 * @param password
+	 * @param type
+	 * @throws SQLException
+	 */
+	public void createNewUser(String username, String password, int type) throws SQLException {
 		String hashedPassword = Utils.passwordHash(password);
 		
 		try {
@@ -64,7 +198,11 @@ public class Model {
 			createDbUser.setString(2, hashedPassword);
 			createDbUser.executeUpdate();
 			createDbUser.close();
-			
+		} catch (SQLException e) {
+			throw new SQLException("El usuario introducido ya existe");
+		}
+		
+		try {
 			PreparedStatement grantUserPermissions = ConnectionDb.getConnection().prepareStatement("GRANT SELECT on population.population TO ?;");
 			grantUserPermissions.setString(1, username);
 			grantUserPermissions.executeUpdate();
@@ -81,11 +219,18 @@ public class Model {
 			insertUserStmt.executeUpdate();
 			insertUserStmt.close();
 		} catch (SQLException e) {
-			throw e;
+			throw new SQLException("Ha ocurrido un error al intentar crear el usuario");
 		}
 	}
 	
-	public String importCsv(String csvRoute) throws FileNotFoundException, SQLException {
+	/**
+	 * 
+	 * @param csvRoute
+	 * @return
+	 * @throws FileNotFoundException
+	 * @throws Exception
+	 */
+	public String importCsv(String csvRoute) throws FileNotFoundException, Exception {
 		File csvFile = new File(csvRoute);
 		
 		if(!csvFile.exists())
@@ -97,36 +242,48 @@ public class Model {
 			createDbTable("population", getHeaderFromCsv(csvFile));
 			csvData =  createCountriesXmlFromCsv(csvFile, XML_DIRECTORY);
 			insertFromXmlToDb("population", XML_DIRECTORY);
-		} catch (SQLException e) {
-			e.printStackTrace();
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 		
 		return csvData;
 	}
 	
-	private void createDbTable(String name, String[] columns) throws SQLException {
-		if(!ConnectionDb.instantiateConnection("root", ""))
-			throw new SQLException("Ha habido un problema conectando con la base de datos");
-		
-		Statement deleteStmt = ConnectionDb.getConnection().createStatement();
-		deleteStmt.execute(String.format("DROP TABLE IF EXISTS %s;", name));
-		deleteStmt.close();
-		
-		String creationQueryString = String.format("CREATE TABLE %s(id INT PRIMARY KEY AUTO_INCREMENT,", name);
-		for(String column : columns) {
-			creationQueryString += String.format("%s VARCHAR(30),", column);
+	/**
+	 * 
+	 * @param name
+	 * @param columns
+	 * @throws Exception
+	 */
+	private void createDbTable(String name, String[] columns) throws Exception {
+		try {
+			Statement deleteStmt = ConnectionDb.getConnection().createStatement();
+			deleteStmt.execute(String.format("DROP TABLE IF EXISTS %s;", name));
+			deleteStmt.close();
+			
+			String creationQueryString = String.format("CREATE TABLE %s(id INT PRIMARY KEY AUTO_INCREMENT,", name);
+			for(String column : columns) {
+				creationQueryString += String.format("%s VARCHAR(30),", column);
+			}
+			creationQueryString = creationQueryString.substring(0, creationQueryString.length() - 1);
+			creationQueryString += ");";
+			
+			Statement createStmt = ConnectionDb.getConnection().createStatement();
+			createStmt.execute(creationQueryString);
+			createStmt.close();	
+		} catch (Exception e) {
+			throw e;
 		}
-		creationQueryString = creationQueryString.substring(0, creationQueryString.length() - 1);
-		creationQueryString += ");";
-		
-		Statement createStmt = ConnectionDb.getConnection().createStatement();
-		createStmt.execute(creationQueryString);
-		createStmt.close();
 	}
 	
-	private String createCountriesXmlFromCsv(File csv, String destinationDirectory) {
+	/**
+	 * 
+	 * @param csv
+	 * @param destinationDirectory
+	 * @return
+	 * @throws Exception
+	 */
+	private String createCountriesXmlFromCsv(File csv, String destinationDirectory) throws Exception {
 		File xmlDirectory = new File(destinationDirectory);
 		if(!xmlDirectory.exists())
 			xmlDirectory.mkdirs();
@@ -170,12 +327,18 @@ public class Model {
 			countriesDataString = countriesDataString.substring(0, countriesDataString.length() - 1);
 			return countriesDataString;
 		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
+			throw e;
 		}
 	}
 	
-	private void insertFromXmlToDb(String dbTable, String xmlDirectory) throws FileNotFoundException {
+	/**
+	 * 
+	 * @param dbTable
+	 * @param xmlDirectory
+	 * @throws FileNotFoundException
+	 * @throws Exception
+	 */
+	private void insertFromXmlToDb(String dbTable, String xmlDirectory) throws FileNotFoundException, Exception {
 		File directory = new File(xmlDirectory);
 		if(!directory.exists())
 			throw new FileNotFoundException("No existe el directorio de destino indicado");
@@ -210,17 +373,22 @@ public class Model {
 				insertStmt.close();
 			}	
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 	}
 	
-	private String[] getHeaderFromCsv(File csv) {
+	/**
+	 * 
+	 * @param csv
+	 * @return
+	 * @throws Exception
+	 */
+	private String[] getHeaderFromCsv(File csv) throws Exception {
 		try (BufferedReader br = new BufferedReader(new FileReader(csv))) {
 			String[] header = br.readLine().split(";");
 			return header;
 		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
+			throw e;
 		}
 	}
 }

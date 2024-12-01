@@ -30,6 +30,11 @@ public class VistaLogin extends JFrame {
 	}
 	
 	public VistaLogin() {
+		initComponents();
+		setVisible(true);
+	}
+	
+	private void initComponents() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		contentPane = new JPanel();
@@ -68,8 +73,6 @@ public class VistaLogin extends JFrame {
 		btnLogin.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		btnLogin.setBounds(154, 186, 121, 23);
 		contentPane.add(btnLogin);
-		
-		setVisible(true);
 	}
 
 }
